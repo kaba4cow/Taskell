@@ -64,8 +64,8 @@ public class Project {
 		}
 	}
 
-	public static Project load(String path) {
-		File file = new File(Taskell.getDirectory().getAbsolutePath() + "/" + path);
+	public static Project load(String path, String name) {
+		File file = new File(path + "/" + name);
 		try (FileInputStream fis = new FileInputStream(file)) {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
 			return new Project(file.getName(), reader);
@@ -75,7 +75,7 @@ public class Project {
 		}
 	}
 
-	public boolean save() {
+	public boolean save(String path) {
 		String string = "";
 		if (!description.isBlank())
 			string += "d " + description + "\n";
@@ -95,8 +95,7 @@ public class Project {
 		}
 
 		try {
-			BufferedWriter writer = new BufferedWriter(
-					new FileWriter(Taskell.getDirectory().getAbsolutePath() + "/" + name));
+			BufferedWriter writer = new BufferedWriter(new FileWriter(path + "/" + name));
 			writer.write(string);
 			writer.close();
 			return true;

@@ -7,7 +7,7 @@ public enum Command {
 	EXIT("exit", "", "Closes the program") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
-			Taskell.exit();
+			exit = true;
 		}
 	},
 	HELP("help", "", "Shows list of all available commands") {
@@ -36,17 +36,17 @@ public enum Command {
 			String path = parameters[0];
 			File file;
 			if (path.equals("..")) {
-				if (Taskell.getDirectory().getParentFile() != null)
-					Taskell.setDirectory(Taskell.getDirectory().getParentFile());
+				if (directory.getParentFile() != null)
+					directory = directory.getParentFile();
 			} else {
 				file = new File(path);
 				if (file.isDirectory())
-					Taskell.setDirectory(file);
+					directory = file;
 				else {
-					path = Taskell.getDirectory().getAbsolutePath() + "\\" + path;
+					path = directory.getAbsolutePath() + "\\" + path;
 					file = new File(path);
 					if (file.isDirectory())
-						Taskell.setDirectory(file);
+						directory = file;
 					else
 						System.out.println(path + " is not a directory");
 				}
@@ -56,7 +56,7 @@ public enum Command {
 	DIR("dir", "", "Lists all files in current directory") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
-			File[] files = Taskell.getDirectory().listFiles();
+			File[] files = directory.listFiles();
 			for (File file : files)
 				System.out.println("-> " + file.getName());
 		}
@@ -67,8 +67,7 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = new Project(parameters[0]);
-			Taskell.setProject(project);
+			project = new Project(parameters[0]);
 		}
 	},
 	OPEN("proj-open", "[name]", "Opens a project with specified name") {
@@ -77,20 +76,19 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = Project.load(parameters[0]);
+			Project project = Project.load(directory.getAbsolutePath(), parameters[0]);
 			if (project == null)
 				System.out.println();
 			else
-				Taskell.setProject(project);
+				Command.project = project;
 		}
 	},
 	SAVE("proj-save", "", "Saves current project") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
-			else if (!project.save())
+			else if (!project.save(directory.getAbsolutePath()))
 				System.out.println("Could not save the project");
 		}
 	},
@@ -100,7 +98,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else {
@@ -115,7 +112,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else {
@@ -127,7 +123,6 @@ public enum Command {
 	PROJ_INFO("proj-info", "", "Lists all tasks in the current project") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else {
@@ -159,7 +154,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else if (parameters[0].equalsIgnoreCase("s"))
@@ -175,7 +169,6 @@ public enum Command {
 	TASK_ADD("task-add", "[name]", "Creates new task in the current project") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else if (!project.addTask(parameters[0]))
@@ -188,7 +181,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 1))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else
@@ -207,7 +199,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 2))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else
@@ -236,7 +227,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 2))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else
@@ -256,7 +246,6 @@ public enum Command {
 			if (invalidParameters(numParameters, 2))
 				return;
 
-			Project project = Taskell.getProject();
 			if (project == null)
 				System.out.println("No project selected");
 			else
@@ -274,6 +263,11 @@ public enum Command {
 	private final String parameters;
 	private final String description;
 
+	private static String[] parameterArray = new String[32];
+	private static boolean exit = false;
+	private static Project project = null;
+	private static File directory = new File(System.getProperty("user.dir"));
+
 	private Command(String name, String parameters, String description) {
 		this.name = name;
 		this.parameters = parameters;
@@ -281,6 +275,87 @@ public enum Command {
 	}
 
 	public abstract void execute(String[] parameters, int numParameters);
+
+	public static boolean processCommand(String line) {
+		System.out.println();
+		String name = getCommandName(line);
+		int numParameters = getCommandParameters(name, line);
+
+		Command command = Command.search(name);
+
+		if (command == null)
+			System.out.println("\"" + line + "\" is an unknown command");
+		else
+			command.execute(parameterArray, numParameters);
+		System.out.println();
+
+		if (exit)
+			return true;
+
+		if (project == null)
+			System.out.print(directory.getAbsolutePath() + ": ");
+		else
+			System.out.print(directory.getAbsolutePath() + " -> " + project.getName() + ": ");
+
+		return false;
+	}
+
+	private static String getCommandName(String string) {
+		String name = "";
+		int length = string.length();
+		for (int i = 0; i < length; i++) {
+			char c = string.charAt(i);
+			if (c == ' ')
+				break;
+			else
+				name += c;
+		}
+		return name;
+	}
+
+	private static int getCommandParameters(String name, String string) {
+		if (name.length() == string.length())
+			return 0;
+
+		string = string.substring(name.length()) + " ";
+		final int length = string.length();
+
+		int index = 0;
+		boolean backslash = false;
+		boolean space = false;
+		String token = "";
+
+		for (int i = 1; i < length; i++) {
+			char c = string.charAt(i);
+			if (!space && !backslash && c == ' ') {
+				parameterArray[index++] = token;
+				token = "";
+				space = true;
+			} else if (c == '\\') {
+				backslash = true;
+				space = false;
+			} else {
+				token += c;
+				space = false;
+				backslash = false;
+			}
+
+			if (index >= parameterArray.length)
+				break;
+		}
+
+		for (int i = index; i < parameterArray.length; i++)
+			parameterArray[i] = null;
+
+		return index;
+	}
+
+	public static Command search(String name) {
+		for (Command command : values())
+			if (command.name.equalsIgnoreCase(name))
+				return command;
+		return null;
+	}
 
 	private static boolean invalidParameters(int numParameters1, int numParameters2) {
 		if (numParameters1 == numParameters2)
@@ -291,13 +366,6 @@ public enum Command {
 
 	private static void invalidParameters() {
 		System.out.println("Invalid parameters");
-	}
-
-	public static Command search(String name) {
-		for (Command command : values())
-			if (command.name.equalsIgnoreCase(name))
-				return command;
-		return null;
 	}
 
 }
