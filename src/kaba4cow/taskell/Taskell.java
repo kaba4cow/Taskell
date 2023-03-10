@@ -5,13 +5,14 @@ import java.util.Scanner;
 public class Taskell {
 
 	public static void main(String[] args) {
-		System.out.println("-------- TASKELL --------");
+		System.out.print("-------- TASKELL --------");
 
 		Scanner scanner = new Scanner(System.in);
 
-		Command.processCommand("help");
-		while (!Command.processCommand(scanner.nextLine())) {
-		}
+		Command.processCommand("");
+		do {
+			System.out.print(Command.getOutput());
+		} while (!Command.processCommand(scanner.nextLine()));
 
 		scanner.close();
 	}

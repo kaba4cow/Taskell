@@ -70,7 +70,6 @@ public class Project {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
 			return new Project(file.getName(), reader);
 		} catch (IOException e) {
-			e.printStackTrace();
 			return null;
 		}
 	}

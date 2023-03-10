@@ -14,8 +14,8 @@ public enum Command {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			for (Command command : values()) {
-				System.out.println(command.name + " " + command.parameters);
-				System.out.println("\t" + command.description);
+				output.append(command.name + " " + command.parameters + "\n");
+				output.append("\t" + command.description + "\n\n");
 			}
 		}
 	},
@@ -23,8 +23,8 @@ public enum Command {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			for (int i = 0; i < numParameters; i++)
-				System.out.print(parameters[i] + " ");
-			System.out.println();
+				output.append(parameters[i] + " ");
+			output.append('\n');
 		}
 	},
 	CD("cd", "[path]", "Changes current directory") {
@@ -48,9 +48,21 @@ public enum Command {
 					if (file.isDirectory())
 						directory = file;
 					else
-						System.out.println(path + " is not a directory");
+						output.append(path + " is not a directory\n");
 				}
 			}
+		}
+	},
+	MD("md", "[name]", "Creates new directory") {
+		@Override
+		public void execute(String[] parameters, int numParameters) {
+			if (invalidParameters(numParameters, 1))
+				return;
+
+			String name = parameters[0];
+			File file = new File(directory.getAbsolutePath() + "/" + name);
+			if (!file.mkdirs())
+				output.append("Could not create directory\n");
 		}
 	},
 	DIR("dir", "", "Lists all files in current directory") {
@@ -58,10 +70,10 @@ public enum Command {
 		public void execute(String[] parameters, int numParameters) {
 			File[] files = directory.listFiles();
 			for (File file : files)
-				System.out.println("-> " + file.getName());
+				output.append("-> " + file.getName() + "\n");
 		}
 	},
-	CREATE("proj-create", "[name]", "Creates a project with specified name") {
+	PROJ_CREATE("proj-create", "[name]", "Creates a project with specified name") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			if (invalidParameters(numParameters, 1))
@@ -70,7 +82,7 @@ public enum Command {
 			project = new Project(parameters[0]);
 		}
 	},
-	OPEN("proj-open", "[name]", "Opens a project with specified name") {
+	PROJ_OPEN("proj-open", "[name]", "Opens a project with specified name") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			if (invalidParameters(numParameters, 1))
@@ -78,18 +90,18 @@ public enum Command {
 
 			Project project = Project.load(directory.getAbsolutePath(), parameters[0]);
 			if (project == null)
-				System.out.println();
+				output.append("File not found\n");
 			else
 				Command.project = project;
 		}
 	},
-	SAVE("proj-save", "", "Saves current project") {
+	PROJ_SAVE("proj-save", "", "Saves current project") {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else if (!project.save(directory.getAbsolutePath()))
-				System.out.println("Could not save the project");
+				output.append("Could not save the project\n");
 		}
 	},
 	PROJ_RENAME("proj-rename", "[name]", "Renames current project") {
@@ -99,7 +111,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else {
 				String name = parameters[0];
 				project.setName(name);
@@ -113,7 +125,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else {
 				String description = parameters[0];
 				project.setDescription(description);
@@ -124,25 +136,25 @@ public enum Command {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else {
-				System.out.println("Project: " + project.getName());
-				System.out.println("Description: " + project.getDescription());
+				output.append("Project: " + project.getName() + "\n");
+				output.append("Description: " + project.getDescription() + "\n");
 				if (project.getNumberOfTasks() == 0) {
-					System.out.println("Tasks: none");
+					output.append("Tasks: none\n");
 					return;
 				}
-				System.out.println("Tasks (" + project.getNumberOfTasks() + "):\n");
-				System.out.printf("%5s | %8s | %11s | %s ", "Index", "Priority", "Status", "Description");
-				System.out.println();
+				output.append("Tasks (" + project.getNumberOfTasks() + "):\n\n");
+				output.append(String.format("%5s | %8s | %11s | %s ", "Index", "Priority", "Status", "Description"));
+				output.append('\n');
 				for (int i = 0; i < 45; i++)
-					System.out.print("-");
-				System.out.println();
+					output.append('-');
+				output.append('\n');
 				for (int i = 0; i < project.getNumberOfTasks(); i++) {
 					Task task = project.getTask(i);
-					System.out.printf("%5s | %8s | %11s | %s ", i, Task.priorities[task.getPriority()],
-							task.getStatus().getName(), task.getDescription());
-					System.out.println();
+					output.append(String.format("%5s | %8s | %11s | %s ", i, Task.priorities[task.getPriority()],
+							task.getStatus().getName(), task.getDescription()));
+					output.append('\n');
 				}
 			}
 		}
@@ -155,7 +167,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else if (parameters[0].equalsIgnoreCase("s"))
 				project.sortByStatus();
 			else if (parameters[0].equalsIgnoreCase("p"))
@@ -170,9 +182,9 @@ public enum Command {
 		@Override
 		public void execute(String[] parameters, int numParameters) {
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else if (!project.addTask(parameters[0]))
-				System.out.println("This task already exists");
+				output.append("This task already exists\n");
 		}
 	},
 	TASK_REMOVE("task-remove", "[index]", "Removes a task from project") {
@@ -182,7 +194,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else
 				try {
 					int index = Integer.parseInt(parameters[0]);
@@ -200,7 +212,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else
 				try {
 					int index = Integer.parseInt(parameters[0]);
@@ -228,7 +240,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else
 				try {
 					int index = Integer.parseInt(parameters[0]);
@@ -247,7 +259,7 @@ public enum Command {
 				return;
 
 			if (project == null)
-				System.out.println("No project selected");
+				output.append("No project selected\n");
 			else
 				try {
 					int index = Integer.parseInt(parameters[0]);
@@ -268,6 +280,8 @@ public enum Command {
 	private static Project project = null;
 	private static File directory = new File(System.getProperty("user.dir"));
 
+	private static StringBuilder output = new StringBuilder();
+
 	private Command(String name, String parameters, String description) {
 		this.name = name;
 		this.parameters = parameters;
@@ -277,25 +291,27 @@ public enum Command {
 	public abstract void execute(String[] parameters, int numParameters);
 
 	public static boolean processCommand(String line) {
-		System.out.println();
+		output.append('\n');
 		String name = getCommandName(line);
 		int numParameters = getCommandParameters(name, line);
 
 		Command command = Command.search(name);
 
-		if (command == null)
-			System.out.println("\"" + line + "\" is an unknown command");
+		if (line.isEmpty())
+			output.append('\n');
+		else if (command == null)
+			output.append("\"" + line + "\" is an unknown command\n");
 		else
 			command.execute(parameterArray, numParameters);
-		System.out.println();
+		output.append('\n');
 
 		if (exit)
 			return true;
 
 		if (project == null)
-			System.out.print(directory.getAbsolutePath() + ": ");
+			output.append(directory.getAbsolutePath() + ": ");
 		else
-			System.out.print(directory.getAbsolutePath() + " -> " + project.getName() + ": ");
+			output.append(directory.getAbsolutePath() + " -> " + project.getName() + ": ");
 
 		return false;
 	}
@@ -350,6 +366,12 @@ public enum Command {
 		return index;
 	}
 
+	public static String getOutput() {
+		String string = output.toString();
+		output = new StringBuilder();
+		return string;
+	}
+
 	public static Command search(String name) {
 		for (Command command : values())
 			if (command.name.equalsIgnoreCase(name))
@@ -365,7 +387,7 @@ public enum Command {
 	}
 
 	private static void invalidParameters() {
-		System.out.println("Invalid parameters");
+		output.append("Invalid parameters\n");
 	}
 
 }
